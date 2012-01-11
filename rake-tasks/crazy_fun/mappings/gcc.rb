@@ -47,7 +47,7 @@ class BaseGcc < Tasks
       end
     end
 
-    flags = "-shared  -Os "
+    flags = "-shared "
     flags += " " + link_args + " " if link_args
 
     # if we've made it this far, try to link. If link fails,
@@ -67,7 +67,9 @@ class BaseGcc < Tasks
     compiler = src_file =~ /\.c$/ ? "gcc" : "g++"
     objname = src_file.split('/')[-1].sub(/\.c[p{2}]*?$/, ".o")
     cmd = "#{compiler} #{src_file} -c -o #{obj_dir}/#{objname} "
-    cmd += " " + args if args
+    cmd += "#{ENV['CFLAGS']} "
+    cmd += args if args
+    puts cmd
     sh cmd do |ok, res|
       if !ok
         puts "Unable to build. Aborting compilation"
