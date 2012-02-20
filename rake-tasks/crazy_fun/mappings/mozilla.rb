@@ -102,9 +102,13 @@ class Compile < BaseXpt
 
       incl = [gecko, "idl"].join(Platform.dir_separator)
 
-      base_cmd = (ENV['XPIDL'] || [gecko, "bin", "xpidl"].join(Platform.dir_separator)).dup
-      base_cmd << ".exe" if windows?
-      base_cmd << " -w -m typelib -I#{incl}"
+      if gecko_typelib_py?
+        base_cmd = "python #{gecko}/sdk/bin/typelib.py --cachedir=/tmp -I#{incl}"
+      else
+        base_cmd = (ENV['XPIDL'] || [gecko, "bin", "xpidl"].join(Platform.dir_separator)).dup
+        base_cmd << ".exe" if windows?
+        base_cmd << " -w -m typelib -I#{incl}"
+      end
 
       src = dir + "/" + Platform.path_for(args[:srcs][0])
 
@@ -112,8 +116,13 @@ class Compile < BaseXpt
       mkdir_p out_dir unless File.exists? out_dir
 
       dir_name = File.dirname(src)
-      cmd = "#{base_cmd} -I#{dir_name} -e #{xpt} #{src}"
+      if gecko_typelib_py?
+        cmd = "#{base_cmd} -I#{dir_name} -o #{xpt} #{src}"
+      else
+        cmd = "#{base_cmd} -I#{dir_name} -e #{xpt} #{src}"
+      end
 
+      puts cmd
       sh cmd do |ok, res|
         if !ok
           raise StandardError, "idl generation failed"

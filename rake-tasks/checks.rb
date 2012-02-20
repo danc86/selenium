@@ -94,6 +94,10 @@ def gecko19?
   ENV["GECKO_SDK"].include? "xulrunner-sdk-1.9.2"
 end
 
+def gecko_typelib_py?
+  File.exists? "#{ENV['GECKO_SDK']}/sdk/bin/typelib.py"
+end
+
 def msbuild_installed?
   windows? && present?("msbuild.exe")
 end
