@@ -34,7 +34,7 @@ interface wdIMouse : nsISupports
    * Move the mouse cursor to a specified location. If x and y are specified
    * they are offsets from the "where" parameter
    */
-  void move(in nsISupports target, in PRInt32 xOffset, in PRInt32 yOffset, [retval] out wdIStatus result);
+  void move(in nsISupports target, in long xOffset, in long yOffset, [retval] out wdIStatus result);
 
   void down(in wdICoordinate where, [retval] out wdIStatus result);
   void up(in wdICoordinate where, [retval] out wdIStatus result);
