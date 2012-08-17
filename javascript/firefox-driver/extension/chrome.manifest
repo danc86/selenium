@@ -43,5 +43,3 @@ component {2E4B69B9-21FE-48ad-A2F6-AB355D6D2FCE} components/modifier-keys.js
 contract @googlecode.com/webdriver/modifierkeys;1 {2E4B69B9-21FE-48ad-A2F6-AB355D6D2FCE}
 
 contract @googlecode.com/webdriver/syntheticmouse;1 {E8F9FEFE-C513-4097-98BE-BE00A41D3645}
-
-binary-component platform/WINNT_x86-msvc/components/imehandler.dll ABI=WINNT_x86-msvc

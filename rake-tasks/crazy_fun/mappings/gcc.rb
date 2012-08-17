@@ -18,25 +18,25 @@ end
 module Gcc
 
 def Gcc::out_name(dir, args)
-  File.join("build", dir, args[:arch], "lib" + args[:name] + ".so")
+  File.join("build", dir, "lib" + args[:name] + ".so")
 end
 
 class BaseGcc < Tasks
   include Platform
 
-  def gcc(fun, dir, srcs, args, link_args, out, is_32_bit)
+  def gcc(fun, dir, srcs, args, link_args, out)
     if !gcc?
       raise StandardError, "gcc missing"
     end
 
-    obj_dir = "#{out}_temp/obj" + (is_32_bit ? "32" : "64")
+    obj_dir = "#{out}_temp/obj"
 
     mkdir_p obj_dir
 
     is_cpp_code = false
     srcs.each do |src|
       FileList.new(File.join(dir, src)).each do |f|
-        ok = gccbuild_c(f, obj_dir, args, is_32_bit)
+        ok = gccbuild_c(f, obj_dir, args)
         if (!ok)
           raise StandardError, "compilation failed"
           return
@@ -48,7 +48,6 @@ class BaseGcc < Tasks
     end
 
     flags = "-shared  -Os "
-    flags += (is_32_bit ? "-m32 " : "-m64 ")
     flags += " " + link_args + " " if link_args
 
     # if we've made it this far, try to link. If link fails,
@@ -64,11 +63,10 @@ class BaseGcc < Tasks
     rm_rf "#{out}_temp"
   end
 
-  def gccbuild_c(src_file, obj_dir, args, is_32_bit)
+  def gccbuild_c(src_file, obj_dir, args)
     compiler = src_file =~ /\.c$/ ? "gcc" : "g++"
     objname = src_file.split('/')[-1].sub(/\.c[p{2}]*?$/, ".o")
     cmd = "#{compiler} #{src_file} -c -o #{obj_dir}/#{objname} "
-    cmd += (is_32_bit ? " -m32" : " -m64")
     cmd += " " + args if args
     sh cmd do |ok, res|
       if !ok
@@ -82,10 +80,6 @@ end
 
 class CheckPreconditions
   def handle(fun, dir, args)
-    if args[:arch] and !(args[:arch] == "i386" or args[:arch] == "amd64")
-      raise StandardError, "arch must be i386 or amd64"
-    end
-
     raise StandardError, "No srcs specified" unless args[:srcs]
   end
 end
@@ -118,8 +112,7 @@ class Build < BaseGcc
 
     file out do
       puts "Compiling: #{task_name(dir, args[:name])} as #{out}"
-      is_32_bit = "amd64" != args[:arch]
-      gcc(fun, dir, args[:srcs], compiler_args, linker_args, out, is_32_bit)
+      gcc(fun, dir, args[:srcs], compiler_args, linker_args, out)
     end
   end
 
@@ -150,14 +143,6 @@ end
 
 class CheckPreconditions
   def handle(fun, dir, args)
-    if args[:arch] and !(args[:arch] == "i386" or args[:arch] == "amd64")
-      raise StandardError, "arch must be i386 or amd64"
-    end
-
-    if not args[:geckoversion]
-      raise StandardError, "Gecko SDK version must be specified."
-    end
-
     raise StandardError, "No srcs specified" unless args[:srcs]
   end
 end
@@ -204,7 +189,6 @@ class Build < BaseGcc
 
     file out do
       puts "Compiling an xpcom component: #{task_name(dir, args[:name])} as #{out}"
-      is_32_bit = "amd64" != args[:arch]
       # g++ 2.6 and below need c++0x, above needs c++11
       begin
         std = `g++ --version`.split("\n")[0].split()[-1].split(".")[1].to_i > 6 ? "11" : "0x"
@@ -224,7 +208,7 @@ class Build < BaseGcc
       else
         linker_args = "-Wall -fshort-wchar -fno-rtti -fno-exceptions -shared -fPIC -L#{gecko_sdk}lib -L#{gecko_sdk}bin -Wl,-rpath-link,#{gecko_sdk}bin -l#{xpcom_lib} -lnss3 -lrt `pkg-config gtk+-2.0 --libs`"
       end
-      gcc(fun, dir, args[:srcs], compiler_args, linker_args, out, is_32_bit)
+      gcc(fun, dir, args[:srcs], compiler_args, linker_args, out)
     end
   end
 end # End Build class

@@ -33,6 +33,7 @@ import org.openqa.selenium.os.CommandLine;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -43,7 +44,7 @@ public class FirefoxBinary {
   private static final String NO_FOCUS_LIBRARY_NAME = "x_ignore_nofocus.so";
   private static final String IME_IBUS_HANDLER_LIBRARY_NAME = "libibushandler.so";
   private static final String PATH_PREFIX = "/" +
-      FirefoxBinary.class.getPackage().getName().replace(".", "/") + "/";
+      FirefoxBinary.class.getPackage().getName().replace(".", "/");
 
   private final Map<String, String> extraEnv = Maps.newHashMap();
   private final List<String> extraOptions = Lists.newArrayList();
@@ -127,11 +128,9 @@ public class FirefoxBinary {
     String existingLdLibPath = System.getenv("LD_LIBRARY_PATH");
     // The returned new ld lib path is terminated with ':'
     String newLdLibPath =
-        extractAndCheck(profileDir, NO_FOCUS_LIBRARY_NAME, PATH_PREFIX + "x86", PATH_PREFIX +
-            "amd64");
+        extractAndCheckPatched(profileDir, NO_FOCUS_LIBRARY_NAME, PATH_PREFIX);
     newLdLibPath +=
-        extractAndCheck(profileDir, IME_IBUS_HANDLER_LIBRARY_NAME, PATH_PREFIX + "x86",
-            PATH_PREFIX + "amd64");
+        extractAndCheckPatched(profileDir, IME_IBUS_HANDLER_LIBRARY_NAME, PATH_PREFIX);
     if (existingLdLibPath != null && !existingLdLibPath.equals("")) {
       newLdLibPath += existingLdLibPath;
     }
@@ -144,6 +143,11 @@ public class FirefoxBinary {
 
   protected String extractAndCheck(File profileDir, String noFocusSoName,
       String jarPath32Bit, String jarPath64Bit) {
+    return extractAndCheckPatched(profileDir, noFocusSoName, jarPath32Bit, jarPath64Bit);
+  }
+
+  private String extractAndCheckPatched(File profileDir, String noFocusSoName,
+      String... paths) {
 
     // 1. Extract x86/x_ignore_nofocus.so to profile.getLibsDir32bit
     // 2. Extract amd64/x_ignore_nofocus.so to profile.getLibsDir64bit
@@ -151,8 +155,7 @@ public class FirefoxBinary {
     // profile.getLibsDir32bit + ":" + profile.getLibsDir64bit
 
     Set<String> pathsSet = new HashSet<>();
-    pathsSet.add(jarPath32Bit);
-    pathsSet.add(jarPath64Bit);
+    pathsSet.addAll(Arrays.asList(paths));
 
     StringBuilder builtPath = new StringBuilder();
 

@@ -173,31 +173,11 @@ class FirefoxBinary(object):
         return ""
 
     def _modify_link_library_path(self):
-        existing_ld_lib_path = os.environ.get('LD_LIBRARY_PATH', '')
-
-        new_ld_lib_path = self._extract_and_check(
-            self.profile, self.NO_FOCUS_LIBRARY_NAME, "x86", "amd64")
-
-        new_ld_lib_path += existing_ld_lib_path
-
-        self._firefox_env["LD_LIBRARY_PATH"] = new_ld_lib_path
+        ld_lib_paths = [os.path.dirname(__file__)]
+        if 'LD_LIBRARY_PATH' in os.environ:
+            ld_lib_paths.extend(os['LD_LIBRARY_PATH'].split(':'))
+        self._firefox_env["LD_LIBRARY_PATH"] = ':'.join(ld_lib_paths)
         self._firefox_env['LD_PRELOAD'] = self.NO_FOCUS_LIBRARY_NAME
-
-    def _extract_and_check(self, profile, no_focus_so_name, x86, amd64):
-
-        paths = [x86, amd64]
-        built_path = ""
-        for path in paths:
-            library_path = os.path.join(profile.path, path)
-            if not os.path.exists(library_path):
-                os.makedirs(library_path)
-            import shutil
-            shutil.copy(os.path.join(os.path.dirname(__file__), path,
-              self.NO_FOCUS_LIBRARY_NAME),
-              library_path)
-            built_path += library_path + ":"
-
-        return built_path
 
     def which(self, fname):
         """Returns the fully qualified path by searching Path of the given
