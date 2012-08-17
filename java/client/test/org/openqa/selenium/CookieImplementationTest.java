@@ -234,6 +234,7 @@ public class CookieImplementationTest extends JUnit4TestBase {
   }
 
   @Test
+  @Ignore(reason = "requires a second valid hostname")
   public void testShouldNotGetCookieOnDifferentDomain() {
     assumeTrue(domainHelper.checkHasValidAlternateHostname());
 
