@@ -126,10 +126,8 @@ class Compile < BaseXpt
       cmd = "#{base_cmd} -I#{dir_name} -e #{xpt} #{src}"
 
       sh cmd do |ok, res|
-        if ok
-          copy_to_prebuilt(xpt, fun)
-        else
-          copy_prebuilt(fun, xpt)
+        if !ok
+          raise StandardError, "idl generation failed"
         end
       end
     end

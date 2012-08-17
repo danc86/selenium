@@ -251,8 +251,8 @@ module Python
 	      mkdir_p x86 unless File.exists?(x86)
 	      mkdir_p amd64 unless File.exists?(amd64)
 
-	      cp "cpp/prebuilt/i386/libnoblur.so", x86+"x_ignore_nofocus.so", :verbose => true
-	      cp "cpp/prebuilt/amd64/libnoblur64.so", amd64+"x_ignore_nofocus.so", :verbose => true
+	      cp "build/cpp/i386/libnoblur.so", x86+"x_ignore_nofocus.so", :verbose => true
+	      cp "build/cpp/amd64/libnoblur64.so", amd64+"x_ignore_nofocus.so", :verbose => true
 
 	      cp firefox_build_dir + "webdriver.xpi" , firefox_py_home, :verbose => true
         cp firefox_build_dir + "webdriver_prefs.json" , firefox_py_home, :verbose => true

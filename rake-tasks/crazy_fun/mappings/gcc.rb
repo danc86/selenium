@@ -6,14 +6,12 @@ class GccMappings
     fun.add_mapping("gcc_library", Gcc::CheckPreconditions.new)
     fun.add_mapping("gcc_library", Gcc::CreateTask.new)
     fun.add_mapping("gcc_library", Gcc::Build.new)
-    fun.add_mapping("gcc_library", Gcc::CopyOutputToPrebuilt.new)
 
     # For building binary components of the extension.
     fun.add_mapping("mozilla_lib", Gcc::MozBinary::CheckPreconditions.new)
     fun.add_mapping("mozilla_lib", Gcc::MozBinary::CreateTask.new)
     fun.add_mapping("mozilla_lib", Gcc::MozBinary::AddDependencies.new)
     fun.add_mapping("mozilla_lib", Gcc::MozBinary::Build.new)
-    fun.add_mapping("mozilla_lib", Gcc::CopyOutputToPrebuilt.new)
   end
 end
 
@@ -28,8 +26,7 @@ class BaseGcc < Tasks
 
   def gcc(fun, dir, srcs, args, link_args, out, is_32_bit)
     if !gcc?
-      copy_prebuilt(fun, out)
-      return
+      raise StandardError, "gcc missing"
     end
 
     obj_dir = "#{out}_temp/obj" + (is_32_bit ? "32" : "64")
@@ -41,7 +38,7 @@ class BaseGcc < Tasks
       FileList.new(File.join(dir, src)).each do |f|
         ok = gccbuild_c(f, obj_dir, args, is_32_bit)
         if (!ok)
-          copy_prebuilt(fun, out)
+          raise StandardError, "compilation failed"
           return
         end
         if (src =~ /\.cpp$/)
@@ -60,8 +57,7 @@ class BaseGcc < Tasks
     linker_cmd = "#{linker} -o #{out} #{obj_dir}/*.o #{flags}" 
     sh linker_cmd do |link_ok, res|
       if (!link_ok)
-        copy_prebuilt(fun, out)
-        return
+        raise StandardError, "linking failed"
       end
     end
 
