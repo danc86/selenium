@@ -30,7 +30,21 @@ Author: timothe@google.com
 #include <vector>
 #include <algorithm>
 
-
+/* Compatibility fixes for ibus */
+#if IBUS_CHECK_VERSION(1,4,0)
+typedef GDBusConnection IBusConnection;
+#endif
+#if IBUS_CHECK_VERSION(1,4,2)
+/* No idea what I should put here, these functions were removed from ibus with 
+   no explanation given ... */
+static gboolean ibus_input_context_is_enabled(IBusInputContext *context) {
+    return context != NULL;
+}
+static void ibus_input_context_disable(IBusInputContext *context) {
+}
+static void ibus_input_context_enable(IBusInputContext *context) {
+}
+#endif
 
 /*
  * Initialize ibus and assures it is connected.
@@ -63,13 +77,15 @@ std::string IBusHandler::GetActiveEngine() const {
     return engine_name;
   }
 
+#if IBUS_CHECK_VERSION(1,4,0)
   // Get the descriptor of the current global engine.
   IBusEngineDesc* desc = ibus_bus_get_global_engine(bus_);
   if (desc) {
     // We copy the name of the global engine.
-    engine_name = std::string(desc->name);
+    engine_name = std::string(ibus_engine_desc_get_name(desc));
     g_object_unref(desc);
   }
+#endif
   return engine_name;
 }
 
@@ -146,7 +162,11 @@ std::vector<std::string> IBusHandler::GetAvailableEngines() const {
   for (GList* engine = g_list_first(engines); engine != NULL ;
        engine = g_list_next(engine)) {
     IBusEngineDesc* desc = IBUS_ENGINE_DESC (engine->data);
+#if IBUS_CHECK_VERSION(1,4,0)
+    loaded_engines.push_back(ibus_engine_desc_get_name(desc));
+#else
     loaded_engines.push_back(desc->name);
+#endif
     g_object_unref(desc);
   }
 
@@ -173,7 +193,11 @@ std::vector<std::string> IBusHandler::GetInstalledEngines() const {
   for (GList* engine = g_list_first(engines); engine != NULL ;
        engine = g_list_next(engine)) {
     IBusEngineDesc* desc = IBUS_ENGINE_DESC (engine->data);
+#if IBUS_CHECK_VERSION(1,4,0)
+    installed_engines.push_back(ibus_engine_desc_get_name(desc));
+#else
     installed_engines.push_back(desc->name);
+#endif
     g_object_unref(desc);
   }
 
@@ -199,31 +223,51 @@ int IBusHandler::LoadEngines(const std::vector<std::string>& engine_names) {
   // We want to avoid strange states where no engines are loaded, hence we
   // simply ignore the call if an empty vector is passed as parameter.
   if (!engine_names.empty()) {
+#if IBUS_CHECK_VERSION(1,4,0)
+    GVariantBuilder variant_builder;
+    g_variant_builder_init(&variant_builder, G_VARIANT_TYPE("as"));
+#else
     GValue gvalue = {0};
     g_value_init(&gvalue, G_TYPE_VALUE_ARRAY);
     // TODO: Where is the array freed?
     GValueArray* array = g_value_array_new(engine_names.size());
+#endif
     std::vector<std::string> available_engines = GetAvailableEngines();
     for (std::vector<std::string>::const_iterator it = engine_names.begin() ;
          it != engine_names.end() ; ++it) {
       // We load the engines only if they are installed on the system.
       if (std::find(available_engines.begin(), available_engines.end(), *it) !=
           available_engines.end()) {
+#if IBUS_CHECK_VERSION(1,4,0)
+        g_variant_builder_add(&variant_builder, "s", it->c_str());
+#else
         GValue array_element = {0};
         g_value_init(&array_element, G_TYPE_STRING);
         g_value_set_string(&array_element, it->c_str());
         g_value_array_append(array, &array_element);
+#endif
         ++nb_loaded_engines;
       }
     }
     // If we made at least one change, then we override the current
     // configuration.
+#if IBUS_CHECK_VERSION(1,4,0)
+    if (nb_loaded_engines > 0) {
+      GVariant *config_value = g_variant_builder_end(&variant_builder);
+      IBusConfig* conf = ibus_bus_get_config(bus_);
+      ibus_config_set_value(conf, "general", "preload_engines", config_value);
+      g_variant_unref(config_value);
+    } else {
+      g_variant_builder_clear(&variant_builder);
+    }
+#else
     if (nb_loaded_engines > 0) {
       g_value_take_boxed(&gvalue, array);
       IBusConfig* conf = ibus_bus_get_config(bus_);
       ibus_config_set_value(conf, "general", "preload_engines", &gvalue);
     }
     g_value_unset(&gvalue);
+#endif
   }
   return nb_loaded_engines;
 }
@@ -243,7 +287,9 @@ bool IBusHandler::ActivateEngine(const std::string& engine_name) {
   // LoadEngines before to ensure a valid state of the ibus system.
   if (std::find(available_engines.begin(), available_engines.end(), engine_name)
       != available_engines.end()) {
+#if IBUS_CHECK_VERSION(1,4,0)
       retval = ibus_bus_set_global_engine(bus_, engine_name.c_str());
+#endif
   }
 
   IBusInputContext* context = GetCurrentInputContext();
