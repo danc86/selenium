@@ -52,18 +52,7 @@ class BaseXpt < Tasks
   end
 
   def gecko_sdk_path(gecko_version)
-    gecko = ["third_party", "gecko-#{gecko_version}"]
-    if windows?
-      gecko << "win32"
-    elsif linux?
-      gecko << "linux"
-    elsif mac?
-      gecko << "mac"
-    else
-      gecko << "unknown"
-    end
-
-    gecko.join(Platform.dir_separator)
+    ENV["GECKO_SDK"]
   end
 end
   

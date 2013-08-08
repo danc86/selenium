@@ -10,7 +10,6 @@ class GccMappings
     # For building binary components of the extension.
     fun.add_mapping("mozilla_lib", Gcc::MozBinary::CheckPreconditions.new)
     fun.add_mapping("mozilla_lib", Gcc::MozBinary::CreateTask.new)
-    fun.add_mapping("mozilla_lib", Gcc::MozBinary::AddDependencies.new)
     fun.add_mapping("mozilla_lib", Gcc::MozBinary::Build.new)
   end
 end
@@ -133,16 +132,6 @@ end
 
 module MozBinary
 
-def MozBinary::gecko_sdk_path(args)
-  if args[:arch] == "i386"
-    plat = "linux"
-  else
-    plat = "linux64"
-  end
-
-  return "third_party/gecko-#{args[:geckoversion]}/#{plat}"
-end
-
 class CheckPreconditions
   def handle(fun, dir, args)
     raise StandardError, "No srcs specified" unless args[:srcs]
@@ -168,26 +157,15 @@ class CreateTask < Tasks
   end
 end
 
-class AddDependencies < Tasks
-  def handle(fun, dir, args)
-    # Get the output file of this task
-    out_task = Rake::Task[task_name(dir, args[:name])].out
-
-    gecko_deps = MozBinary::gecko_sdk_path args
-    # Make the *output file* depend on the Gecko SDK, not this
-    # task itself
-    file out_task.to_sym => gecko_deps
-  end
-end
-
 class Build < BaseGcc
   include Platform
 
+  def gecko_sdk_version()
+    ENV['GECKO_SDK_VERSION']
+  end
+
   def handle(fun, dir, args)
     out = Gcc::out_name(dir, args)
-    gecko_sdk = MozBinary::gecko_sdk_path args
-    gecko_sdk += Platform.dir_separator
-    xpcom_lib = args[:xpcom_lib] || "xpcomglue_s_nomozalloc"
 
     file out do
       puts "Compiling an xpcom component: #{task_name(dir, args[:name])} as #{out}"
@@ -197,19 +175,15 @@ class Build < BaseGcc
       rescue
         std = ""
       end
-      base_compiler_args = "-Wall -fPIC -fshort-wchar -std=c++#{std} -Dunix -D__STDC_LIMIT_MACROS -I cpp/webdriver-interactions -I cpp/imehandler/common -I #{gecko_sdk}include -I #{gecko_sdk}include/nspr " + "`pkg-config gtk+-2.0 --cflags`"
-      if (args[:geckoversion].to_i < 29)
+      base_compiler_args = "-Wall -fPIC -fshort-wchar -std=c++#{std} -Dunix -D__STDC_LIMIT_MACROS -I cpp/webdriver-interactions -I cpp/imehandler/common `pkg-config libxul gtk+-2.0 --cflags`"
+      if (gecko_sdk_version().to_i < 29)
         base_compiler_args += " -DWEBDRIVER_LEGACY_GECKO"
       end
-      if (args[:geckoversion].to_i < 31)
+      if (gecko_sdk_version().to_i < 31)
         base_compiler_args += " -DWEBDRIVER_GECKO_USES_ISUPPORTS1"
       end
       compiler_args = [args[:args], base_compiler_args].join " "
-      if (args[:geckoversion].to_i < 22)
-        linker_args = "-Wall -fshort-wchar -fno-rtti -fno-exceptions -shared -fPIC -L#{gecko_sdk}lib -L#{gecko_sdk}bin -Wl,-rpath-link,#{gecko_sdk}bin -l#{xpcom_lib} -lxpcom -lnspr4 -lrt `pkg-config gtk+-2.0 --libs`"
-      else
-        linker_args = "-Wall -fshort-wchar -fno-rtti -fno-exceptions -shared -fPIC -L#{gecko_sdk}lib -L#{gecko_sdk}bin -Wl,-rpath-link,#{gecko_sdk}bin -l#{xpcom_lib} -lnss3 -lrt `pkg-config gtk+-2.0 --libs`"
-      end
+      linker_args = "-Wall -fshort-wchar -fno-rtti -fno-exceptions -shared -fPIC `pkg-config libxul gtk+-2.0 --libs`"
       gcc(fun, dir, args[:srcs], compiler_args, linker_args, out)
     end
   end

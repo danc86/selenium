@@ -86,6 +86,14 @@ def python?
   present?("python") || present?("python.exe")
 end
 
+def gecko?
+  File.exists? ENV["GECKO_SDK"]
+end
+
+def gecko19?
+  ENV["GECKO_SDK"].include? "xulrunner-sdk-1.9.2"
+end
+
 def msbuild_installed?
   windows? && present?("msbuild.exe")
 end
