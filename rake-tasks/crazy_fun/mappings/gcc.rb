@@ -182,6 +182,9 @@ class Build < BaseGcc
       if (gecko_sdk_version().to_i < 31)
         base_compiler_args += " -DWEBDRIVER_GECKO_USES_ISUPPORTS1"
       end
+      if (gecko_sdk_version().to_i >= 27)
+        base_compiler_args += " -DWEBDRIVER_GECKO_HAS_CHAR16"
+      end
       compiler_args = [args[:args], base_compiler_args].join " "
       linker_args = "-Wall -fshort-wchar -fno-rtti -fno-exceptions -shared -fPIC `pkg-config libxul gtk+-2.0 --libs`"
       gcc(fun, dir, args[:srcs], compiler_args, linker_args, out)
